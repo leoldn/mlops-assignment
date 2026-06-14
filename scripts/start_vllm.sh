@@ -5,12 +5,15 @@
 
 set -euo pipefail
 
-MODEL="${MODEL:-Qwen/Qwen3-30B-A3B-Instruct-2507}"
-PORT="${PORT:-8000}"
+MODEL="Qwen/Qwen3-30B-A3B-Instruct-2507"
 
 exec uv run python -m vllm.entrypoints.openai.api_server \
     --model "$MODEL" \
     --host 0.0.0.0 \
-    --port "$PORT" \
-    --enable-reasoning \
-    --reasoning-parser deepseek_r1
+    --port 8000 \
+    --quantization fp8 \
+    --max-model-len 8192 \
+    --gpu-memory-utilization 0.95 \
+    --max-num-seqs 128 \
+    --enable-chunked-prefill \
+    --reasoning-parser qwen3
