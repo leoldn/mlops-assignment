@@ -57,8 +57,38 @@ def matches(gold_rows: list[tuple] | None, pred_rows: list[tuple] | None) -> boo
 # ---------- Implement these (Phase 5) ----------------------------------
 
 def eval_one(question: dict, agent_url: str) -> dict:
-    """Score one question. Return a dict capturing per-iteration correctness."""
-    raise NotImplementedError("Phase 5")
+    """Score one question. Return a dict capturing per-iteration correctness."""    
+    payload = {"question": question["question"], "db": question["db_id"]}
+    resp = httpx.post(agent_url, json=payload, timeout=120)
+    resp.raise_for_status()
+    data = resp.json()
+
+    agent_sql = data.get("sql", "")
+    iterations = data.get("iterations", 0)
+    history = data.get("history", [])
+
+    gold_ok, gold_rows, _ = run_sql(question["db_id"], question["gold_sql"])
+    
+    # Evaluate correctness at each iteration using the SQL from history
+    per_iter: dict[int, bool] = {}
+    for i, entry in enumerate(history):
+        sql_at_iter = entry.get("sql", "")
+        ok, rows, _ = run_sql(question["db_id"], sql_at_iter)
+        per_iter[i] = matches(gold_rows, rows) if gold_ok else False
+
+    final_ok, final_rows, _ = run_sql(question["db_id"], agent_sql)
+    final_correct = matches(gold_rows, final_rows) if gold_ok else False
+
+    return {
+        "question_id": question.get("question_id", question["question"][:40]),
+        "db_id": question["db_id"],
+        "agent_sql": agent_sql,
+        "gold_sql": question["gold_sql"],
+        "iterations": iterations,
+        "final_correct": final_correct,
+        "per_iter_correct": per_iter,
+    }
+
 
 
 def summarize(results: list[dict]) -> dict:
@@ -70,7 +100,27 @@ def summarize(results: list[dict]) -> dict:
     The agent stopped emitting; whatever it had at termination is what
     would have been served had we polled at iteration k.
     """
-    raise NotImplementedError("Phase 5")
+    n = len(results)
+    max_iter = max((r["iterations"] for r in results), default=0)
+    
+    # Per-iteration pass rate with carry-forward
+    per_iter_rates = {}
+    for k in range(max_iter + 1):
+        correct = 0
+        for r in results:
+            # Use final result as carry-forward if iter k > what agent ran
+            last_available = max((i for i in r["per_iter_correct"]), default=-1)
+            if k <= last_available:
+                correct += int(r["per_iter_correct"].get(k, False))
+            else:
+                correct += int(r["final_correct"])
+        per_iter_rates[str(k)] = correct / n if n else 0.0
+
+    return {
+        "n": n,
+        "overall_pass_rate": sum(r["final_correct"] for r in results) / n if n else 0.0,
+        "per_iteration_pass_rate": per_iter_rates,
+    }
 
 
 # ---------- Main (provided) --------------------------------------------

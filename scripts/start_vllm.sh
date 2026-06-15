@@ -11,9 +11,7 @@ exec uv run python -m vllm.entrypoints.openai.api_server \
     --model "$MODEL" \
     --host 0.0.0.0 \
     --port 8000 \
-    --quantization fp8 \
-    --max-model-len 8192 \
     --gpu-memory-utilization 0.95 \
-    --max-num-seqs 128 \
+    --max-model-len 8192 \
     --enable-chunked-prefill \
-    --reasoning-parser qwen3
+    --max-num-seqs 128

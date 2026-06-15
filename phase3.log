@@ -1,0 +1,36 @@
+=== Phase 3 Evaluation Run: Mon Jun 15 14:18:54 UTC 2026 ===
+
+----------------------------------------
+Request #1: Exact timestamp format (codebase_community)
+Payload: {"question": "User No.23853 gave a comment to a post at 9:08:18 on 2013/7/12, was that post well-finished?", "db": "codebase_community"}
+----------------------------------------
+Response:
+{"sql":"SELECT p.Title, p.CommunityOwnedDate, p.ClosedDate\nFROM posts p\nJOIN comments c ON p.Id = c.PostId\nWHERE c.UserId = 23853\n  AND c.CreationDate LIKE '2013-07-12 09:08:18%'","rows":[["What are the advantages of hidden Markov model over neural network?",null,"2013-07-12 13:59:45.0"]],"iterations":2,"ok":true,"error":null,"history":[{"node":"generate_sql","sql":"SELECT p.Title, p.CommunityOwnedDate, p.ClosedDate\nFROM posts p\nJOIN comments c ON p.Id = c.PostId\nWHERE c.UserId = 23853\n  AND c.CreationDate = '2013-07-12 09:08:18';"},{"node":"revise","sql":"SELECT p.Title, p.CommunityOwnedDate, p.ClosedDate\nFROM posts p\nJOIN comments c ON p.Id = c.PostId\nWHERE c.UserId = 23853\n  AND c.CreationDate LIKE '2013-07-12 09:08:18%'"}]}
+
+----------------------------------------
+Request #2: Cryptic column name (financial)
+Payload: {"question": "What is the average number of crimes committed in 1995 in regions where the number exceeds 4000 and the region has accounts that are opened starting from the year 1997?", "db": "financial"}
+----------------------------------------
+Response:
+{"sql":"SELECT AVG(d.A14) AS average_crimes\nFROM district d\nWHERE d.A14 > 4000\n  AND EXISTS (\n    SELECT 1\n    FROM account a\n    WHERE a.district_id = d.district_id\n      AND CAST(strftime('%Y', a.date) AS INTEGER) >= 1997\n  )\n  AND d.A14 IS NOT NULL;","rows":[[null]],"iterations":3,"ok":true,"error":null,"history":[{"node":"generate_sql","sql":"SELECT AVG(d.A14) AS average_crimes\nFROM district d\nWHERE d.A14 > 4000\n  AND EXISTS (\n    SELECT 1\n    FROM account a\n    WHERE a.district_id = d.district_id\n      AND strftime('%Y', a.date) >= '1997'\n  );"},{"node":"revise","sql":"SELECT AVG(d.A14) AS average_crimes\nFROM district d\nWHERE d.A14 > 4000\n  AND EXISTS (\n    SELECT 1\n    FROM account a\n    WHERE a.district_id = d.district_id\n      AND CAST(strftime('%Y', a.date) AS INTEGER) >= 1997\n  );"},{"node":"revise","sql":"SELECT AVG(d.A14) AS average_crimes\nFROM district d\nWHERE d.A14 > 4000\n  AND EXISTS (\n    SELECT 1\n    FROM account a\n    WHERE a.district_id = d.district_id\n      AND CAST(strftime('%Y', a.date) AS INTEGER) >= 1997\n  )\n  AND d.A14 IS NOT NULL;"}]}
+
+----------------------------------------
+Request #3: NULL vs zero for missing data (superhero)
+Payload: {"question": "In superheroes with missing weight data, calculate the difference between the number of superheroes with blue eyes and no eye color.", "db": "superhero"}
+----------------------------------------
+Response:
+{"sql":"SELECT \n  COUNT(CASE WHEN s.eye_colour_id = (SELECT id FROM colour WHERE colour = 'Blue') THEN 1 END) - \n  COUNT(CASE WHEN s.eye_colour_id IS NULL THEN 1 END) AS difference\nFROM superhero s\nWHERE s.weight_kg IS NULL;","rows":[[1]],"iterations":1,"ok":true,"error":null,"history":[{"node":"generate_sql","sql":"SELECT \n  COUNT(CASE WHEN s.eye_colour_id = (SELECT id FROM colour WHERE colour = 'Blue') THEN 1 END) - \n  COUNT(CASE WHEN s.eye_colour_id IS NULL THEN 1 END) AS difference\nFROM superhero s\nWHERE s.weight_kg IS NULL;"}]}
+
+----------------------------------------
+Request #4: Sex-based thresholds + correlated subquery (thrombosis_prediction)
+Payload: {"question": "For all patients with normal uric acid (UA), what is the average UA index based on their latest laboratory examination result?", "db": "thrombosis_prediction"}
+----------------------------------------
+Response:
+{"sql":"SELECT AVG(l.\"UA\") AS average_UA\nFROM \"Laboratory\" l\nINNER JOIN \"Patient\" p ON l.\"ID\" = p.\"ID\"\nWHERE l.\"UA\" BETWEEN 3.0 AND 7.0\n  AND l.\"Date\" = (\n    SELECT MAX(l2.\"Date\")\n    FROM \"Laboratory\" l2\n    WHERE l2.\"ID\" = l.\"ID\"\n  );","rows":[[4.593953488372093]],"iterations":1,"ok":true,"error":null,"history":[{"node":"generate_sql","sql":"SELECT AVG(l.\"UA\") AS average_UA\nFROM \"Laboratory\" l\nINNER JOIN \"Patient\" p ON l.\"ID\" = p.\"ID\"\nWHERE l.\"UA\" BETWEEN 3.0 AND 7.0\n  AND l.\"Date\" = (\n    SELECT MAX(l2.\"Date\")\n    FROM \"Laboratory\" l2\n    WHERE l2.\"ID\" = l.\"ID\"\n  );"}]}
+
+----------------------------------------
+Request #5: Wrong join key (codebase_community)
+Payload: {"question": "Mention the display name and location of the user who owned the excerpt post with hypothesis-testing tag.", "db": "codebase_community"}
+----------------------------------------
+Response:
+{"sql":"SELECT u.DisplayName, u.Location\nFROM users u\nJOIN posts p ON u.Id = p.OwnerUserId\nJOIN tags t ON p.Id = t.ExcerptPostId\nWHERE t.TagName = 'hypothesis-testing';","rows":[["mbq","Warsaw, Poland"]],"iterations":1,"ok":true,"error":null,"history":[{"node":"generate_sql","sql":"SELECT u.DisplayName, u.Location\nFROM users u\nJOIN posts p ON u.Id = p.OwnerUserId\nJOIN tags t ON p.Id = t.ExcerptPostId\nWHERE t.TagName = 'hypothesis-testing';"}]}

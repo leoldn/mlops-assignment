@@ -57,6 +57,7 @@ def answer(req: AnswerRequest) -> AnswerResponse:
     state = AgentState(question=req.question, db_id=req.db)
     config: dict[str, Any] = {
         "callbacks": [_lf_handler] if _lf_handler is not None else [],
+        "tags": [f"{k}:{v}" for k, v in req.tags.items()],
         "metadata": req.tags,
     }
     try:
